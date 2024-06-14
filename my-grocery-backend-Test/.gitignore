@@ -1,0 +1,10 @@
+.env
+master_expired.json
+master_nonexpired.json
+result.json
+shopping_list.json
+/myenv
+/item_frequency_list
+/keys
+client_secret_888361723877-jpss9hmclhi12om6dah15pm2epe4tget.apps.googleusercontent.com.json
+my-grocery-home-firebase-adminsdk-hdtde-3b0731d354.json

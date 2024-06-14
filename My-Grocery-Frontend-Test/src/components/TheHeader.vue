@@ -19,9 +19,9 @@
 </template>
 
 <script>
-import TheMenu from "../UI/TheMenu.vue";
-import HeaderLogo from "../UI/HeaderLogo.vue";
-import SearchInventory from "../Data-resources/Search-component/SearchInventory.vue";
+import TheMenu from "./TheMenu.vue";
+import HeaderLogo from "./HeaderLogo.vue";
+import SearchInventory from "./SearchInventory.vue";
 import {
   fetchMasterExpiredData,
   fetchShoppingListData,

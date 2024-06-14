@@ -80,15 +80,15 @@
 
 <script>
 import OffersPage from "@/views/OffersList.vue";
-import HomePrompt from "../Data-resources/ChatGPTPrompts/HomePrompts.vue";
-import PurchasedList from "../Data-resources/ProductList/PurchasedList.vue";
-import DeleteAllPurchaseList from "../Data-resources/DeleteItems/DeleteAllPurchaseList.vue";
+import HomePrompt from "./HomePrompts.vue";
+import PurchasedList from "./PurchasedList.vue";
+import DeleteAllPurchaseList from "./DeleteAllPurchaseList.vue";
 import {
   fetchPurchasedListData,
   fetchMasterExpiredData,
   fetchShoppingListData,
 } from "@/plugins/Dataservice.js";
-import SearchInventory from "../Data-resources/Search-component/SearchInventory.vue";
+import SearchInventory from "./SearchInventory.vue";
 
 const baseUrl = "http://127.0.0.1:8081";
 

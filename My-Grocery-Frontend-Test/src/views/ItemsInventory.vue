@@ -169,15 +169,15 @@
 </template>
 
 <script>
-import SearchInventory from "../components/Data-resources/Search-component/SearchInventory.vue";
-import ExpiredList from "../components/Data-resources/ProductList/ExpiredList.vue";
-import NonExpiredList from "../components/Data-resources/ProductList/NonExpiredList.vue";
-import AddItems from "../components/Data-resources/AddItems/AddCustomItem.vue";
-import DeleteAllMasterNonExpired from "../components/Data-resources/DeleteItems/DeleteAllMasterNonExpired.vue";
-import DeleteAllShopping from "../components/Data-resources/DeleteItems/DeleteAllShopping.vue";
-import DeleteAllMasterExpired from "../components/Data-resources/DeleteItems/DeleteAllMasterExpired.vue";
-import ShoppingList from "../components/Data-resources/ProductList/ShoppingList.vue";
-import FrequencyList from "../components/Data-resources/ProductList/FrequencyList.vue";
+import SearchInventory from "../components/SearchInventory.vue";
+import ExpiredList from "../components/ExpiredList.vue";
+import NonExpiredList from "../components/NonExpiredList.vue";
+import AddItems from "../components/AddCustomItem.vue";
+import DeleteAllMasterNonExpired from "../components/DeleteAllMasterNonExpired.vue";
+import DeleteAllShopping from "../components/DeleteAllShopping.vue";
+import DeleteAllMasterExpired from "../components/DeleteAllMasterExpired.vue";
+import ShoppingList from "../components/ShoppingList.vue";
+import FrequencyList from "../components/FrequencyList.vue";
 import {
   fetchMasterExpiredData,
   fetchShoppingListData,

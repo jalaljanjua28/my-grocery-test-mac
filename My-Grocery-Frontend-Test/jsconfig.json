@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "module": "esnext",
-    "baseUrl": "./",
-    "moduleResolution": "node",
+    "target": "es5", // Specifies the target ECMAScript version for the compiled output
+    "module": "esnext", // Specifies the module system to use for the compiled output
+    "baseUrl": "./", // Specifies the base directory for resolving non-relative module imports
+    "moduleResolution": "node", // Specifies how modules are resolved
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"] // Specifies a path mapping for module imports
     },
-    "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
+    "lib": ["esnext", "dom", "dom.iterable", "scripthost"] // Specifies the set of library files to be included in the compiled output
   }
 }

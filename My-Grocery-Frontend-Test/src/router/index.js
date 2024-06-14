@@ -11,10 +11,10 @@ import OrdersHistory from "../views/OrdersHistory";
 import RecipePage from "../components/Layout/RecipePage";
 import FAQPage from "../views/FAQs";
 import BarcodeScan from "../views/BarcodeScan";
-import Search from "../components/Data-resources/Search-component/SearchInventory.vue";
-import HealthPage from "../components/Layout/HealthPage.vue";
-import UserDefinedPrompt from "../components/Layout/UserDefinedPrompt.vue";
-import FirebaseAuth from "../components/FirbaseAuth/LoginSigup.vue";
+import Search from "../components/SearchInventory.vue";
+import HealthPage from "../components/HealthPage.vue";
+import UserDefinedPrompt from "../components/UserDefinedPrompt.vue";
+import FirebaseAuth from "../FirbaseAuth/LoginSigup.vue";
 
 Vue.use(VueRouter);
 

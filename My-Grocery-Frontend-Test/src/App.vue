@@ -6,7 +6,7 @@
 </template>
 
 <script>
-import LoadingPage from "./components/UI/LoadingPage.vue";
+import LoadingPage from "./components/LoadingPage.vue";
 
 export default {
   components: {

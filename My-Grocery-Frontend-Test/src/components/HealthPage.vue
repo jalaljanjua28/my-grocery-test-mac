@@ -1,28 +1,34 @@
 <template>
   <div>
     <router-link to="/" style="text-decoration: none">
-      <el-page-header content="Recipes"> </el-page-header>
+      <el-page-header content="Health Page"> </el-page-header>
     </router-link>
+
     <el-main class="main-content">
       <div class="nav-buttons">
         <router-link to="items-inventory" class="router_link">
           <el-button type="primary" size="x-small" plain>Items</el-button>
         </router-link>
-        <router-link to="/health-page" class="router_link">
-          <el-button type="info" size="x-small" plain style="margin-left: 10px"
-            >Health</el-button
+        <router-link to="/recipes-page" class="router_link">
+          <el-button
+            type="warning"
+            size="x-small"
+            plain
+            style="margin-left: 10px"
+            >Recipes</el-button
           >
         </router-link>
       </div>
-      <recipe-prompt></recipe-prompt>
+      <health-prompt></health-prompt>
     </el-main>
   </div>
 </template>
+
 <script>
-import RecipePrompt from "../Data-resources/ChatGPTPrompts/RecipePrompts.vue";
+import HealthPrompt from "./HealthPrompts.vue";
 export default {
   components: {
-    RecipePrompt,
+    HealthPrompt,
   },
   data() {
     return {};
@@ -31,5 +37,4 @@ export default {
   methods: {},
 };
 </script>
-
 <style scoped></style>

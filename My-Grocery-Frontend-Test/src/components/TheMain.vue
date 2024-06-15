@@ -34,7 +34,7 @@ export default {
           this.currentUser = user;
           console.log("User is logged in:", user.email);
           // Ensure simulateUpload is called only after currentUser is set
-          this.$refs.BarcodeDummy.simulateUpload(this.currentUser);
+          this.$refs.BarcodeDummy.simulateUpload();
         } else {
           console.log("No user is logged in");
         }

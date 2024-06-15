@@ -19,77 +19,98 @@ import time
 from PIL import Image
 import pytesseract
 
-from flask import Flask, session, jsonify, request
-from flask_session import Session
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from dateparser.search import search_dates
 
 from google.oauth2 import service_account
 from google.cloud import storage
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 
 # import firebase_admin
-from firebase_admin import credentials, firestore, initialize_app
+from firebase_admin import credentials, firestore, initialize_app, auth
 
-# Load environment variables
-# load_dotenv()
 # Initialize Firebase
-cred = credentials.Certificate("/Users/jalaljanjua/Desktop/my-grocery-home-test/my-grocery-backend-Test/my-grocery-home-firebase-adminsdk-hdtde-3b0731d354.json")
-initialize_app(cred)
-# Initialize Flask app
-app = Flask(__name__)
-CORS(app, methods=["GET", "POST"], supports_credentials=True)
+service_account_key_path = "C:/Users/jalal/Downloads/my-grocery-test-mac/my-grocery-backend-Test/my-grocery-home-745726ebbfac.json"
+app_default_credentials_path = "C:/Users/jalal/Downloads/my-grocery-test-mac/my-grocery-backend-Test/application_default_credentials.json"
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Set environment variables
 os.environ["GOOGLE_CLOUD_PROJECT"] = "my-grocery-home"
 os.environ["BUCKET_NAME"] = "grocery-bucket"
 
+# Load environment variables
+load_dotenv()
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app, methods=["GET", "POST"], supports_credentials=True)
+
 # Initialize Firestore and Storage
+cred = credentials.Certificate("C:/Users/jalal/Downloads/my-grocery-test-mac/my-grocery-backend-Test/my-grocery-home-firebase-adminsdk-hdtde-eb31bbe2f8.json")
+initialize_app(cred)
 db = firestore.client()
 storage_client = storage.Client()
 bucket_name = "grocery-bucket"
-app.config["SECRET_KEY"] = "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"
-app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
 
-@app.route("/api/set-email", methods=["POST", "GET"])
+# Initialize Session
+# app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+# app.config["SESSION_TYPE"] = "filesystem"
+# Session(app)
+
+@app.route('/api/set-email', methods=['POST'])
 def set_email():
     data = request.get_json()
-    user_email = data.get("email")
-    if not user_email:
-        return jsonify({"error": "Email is required"}), 400
-    session["user_email"] = user_email
-    app.logger.debug(f"Email set in session: {session['user_email']}")
-    return jsonify({"message": "Email set in session"}), 200
+    id_token = data['idToken']
+    
+    try:
+        # Verify the ID token
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token['uid']
+        email = decoded_token['email']  # Retrieve email directly from decoded token
+        
+        # Retrieve user data from Firestore
+        db = firestore.client()
+        user_ref = db.collection('users').document(uid)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            # Store user email in Firestore if not already stored
+            user_ref.set({'email': email})
+        
+        # Create a folder for the user using the email address in Google Cloud Storage
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{email}/"
+        blob = bucket.blob(folder_name)  # Creating a file as a placeholder
+        blob.upload_from_string('')  # Upload an empty string to create the folder
+        
+        return jsonify({'message': 'User email and folder created successfully', 'email': email}), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-def create_user_folder(user_email):
-    app.logger.debug(f"Email provided: {user_email}")
-    app.logger.debug(f"Session content before setting email: {dict(session)}")
-    # session['user_email'] = email
-    app.logger.debug(f"Email set in session: {session.get('user_email')}")
-    """Creates a folder in GCS named after the user's email."""
-    bucket = storage_client.bucket(bucket_name)
-    folder_name = f"user_{user_email}/"
-    blob = bucket.blob(folder_name)
-    blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
-    print(f'Folder created for {user_email}')
+# @app.route("/api/set-email", methods=["POST", "GET"])
+# def set_email():
+#     data = request.get_json()
+#     user_email = data.get("email")
+#     if not user_email:
+#         return jsonify({"error": "Email is required"}), 400
+#     session["user_email"] = user_email
+#     app.logger.debug(f"Email set in session: {session['user_email']}")
+#     return jsonify({"message": "Email set in session"}), 200
 
-# def upload_file_to_folder(email, file):
-#     """Uploads a file to the user's folder in GCS."""
+# def create_user_folder(user_email):
+#     app.logger.debug(f"Email provided: {user_email}")
+#     app.logger.debug(f"Session content before setting email: {dict(session)}")
+#     # session['user_email'] = email
+#     app.logger.debug(f"Email set in session: {session.get('user_email')}")
+#     """Creates a folder in GCS named after the user's email."""
 #     bucket = storage_client.bucket(bucket_name)
-#     folder_name = f"{email}/"
-#     filename = file.filename
-#     blob = bucket.blob(f"{folder_name}{filename}")
-#     blob.upload_from_file(file)
-#     print(f'File {filename} uploaded to {folder_name}')
-
-# Now you can access your credentials using os.getenv()
-
-# Paths to the key files
-service_account_key_path = "/Users/jalaljanjua/Desktop/my-grocery-home-test/my-grocery-backend-Test/keys/my-grocery-home-745726ebbfac.json"
-app_default_credentials_path = "/Users/jalaljanjua/Desktop/my-grocery-home-test/my-grocery-backend-Test/keys/application_default_credentials.json"
-openai_api_key = ""
+#     folder_name = f"user_{user_email}/"
+#     blob = bucket.blob(folder_name)
+#     blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+#     print(f'Folder created for {user_email}')
 
 # Retrieve and use the service account key
 if service_account_key_path:
@@ -131,21 +152,25 @@ date_record = list()
 
 @app.route("/api/food-handling-advice-using-json", methods=["GET"])
 def food_handling_advice_using_json():
-    app.logger.debug(f"Session content when retrieving email: {dict(session)}")
-    user_email = session.get("user_email")
-    if not user_email:
-        app.logger.debug("Email not found in session")
-        return jsonify({"error": "User email is not set in session"}), 400
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = f"user_data/{user_email}/HomePage"
-    json_blob_name = f"{folder_name}/food_handling_advice.json"
-    blob = bucket.blob(json_blob_name)
     try:
+        id_token = request.headers['Authorization'].split('Bearer ')[1]  # Extract ID token from Authorization header
+        # Verify the ID token
+        decoded_token = auth.verify_id_token(id_token)
+        user_email = decoded_token['email']
+        
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        print(f"Folder name: {folder_name}")
+        json_blob_name = f"{folder_name}/food_handling_advice.json"
+        blob = bucket.blob(json_blob_name)
+        
         content = blob.download_as_text()
         food_handling_advice = json.loads(content)
+        
         return jsonify({"handlingadvice": food_handling_advice})
+    
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/food-handling-advice-using-gpt", methods=["GET", "POST"])
 def food_handling_advice_using_gpt():
@@ -1990,56 +2015,61 @@ def delete_item_from_purchase_list():
 # Rest of the code
 ##############################################################################################################################################################################
 from google.api_core.exceptions import NotFound
-
 @app.route("/api/image-process-upload-create", methods=["POST"])
 def main():
-    if "file" not in request.files or "email" not in request.form:
-        print("Request files:", request.files)
-        print("Request form:", request.form)
-        return jsonify({"message": "No file or email provided"}), 400  
-    file = request.files["file"]
-    user_email = session.get("user_email")
-    # Ensure user folder exists
-    create_user_folder(user_email)
-    with tempfile.TemporaryDirectory() as temp_dir:
-        filename = file.filename
-        file_path = os.path.join(temp_dir, filename)
-        blob = storage_client.bucket(bucket_name).blob(f"{user_email}/{filename}") 
-        try:
-            # Check if the file exists before downloading
-            blob.reload()  # This will throw a NotFound exception if the blob does not exist
-            blob.download_to_filename(file_path)
-        except NotFound:
-            if filename == "dummy.jpg":
-                print("Dummy file not found, skipping download.")
-            else:
-                return jsonify({"message": "File not found in the bucket"}), 404
-        if filename != "dummy.jpg":
-            text = process_image(file_path)
-            kitchen_items = read_kitchen_eatables()
-            nonfood_items = nonfood_items_list()
-            irrelevant_names = irrelevant_names_list()           
-            result = process_text(text, kitchen_items, nonfood_items, irrelevant_names)     
-            temp_file_path = os.path.join(temp_dir, "temp_data.json")
-            with open(temp_file_path, "w") as json_file:
-                json.dump(result, json_file, indent=4)
-            process_json_files_folder(temp_dir)           
-            with open("master_nonexpired.json", "r") as f:
-                data_nonexpired = json.load(f)
-            create_master_expired_file(data_nonexpired)           
-            upload_result_to_storage(result, user_email)
-            upload_master_nonexpired_to_storage(data_nonexpired, user_email)     
-            with open("master_expired.json", "r") as f:
-                data_expired = json.load(f)   
-            upload_master_expired_to_storage(data_expired, user_email)
-        try:
-            # Attempt to delete the file if it exists
-            blob.reload()  # Ensure the file still exists before deleting
-            blob.delete()
-        except NotFound:
-            print("File not found during deletion, skipping.")
-    
-    return jsonify({"message": "File uploaded and processed successfully"})
+    try:
+        # Extract ID token from Authorization header
+        # id_token = request.headers.get('Authorization').split('Bearer ')[1]
+        # print(id_token)
+        # # Verify the ID token
+        # decoded_token = auth.verify_id_token(id_token)
+        # user_email = decoded_token['email']
+        
+        if "file" not in request.files:
+            return jsonify({"message": "No file provided"}), 400
+        
+        file = request.files["file"]
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            filename = file.filename
+            file_path = os.path.join(temp_dir, filename)
+            
+            # Upload file to Google Cloud Storage
+            blob = storage_client.bucket(bucket_name).blob(filename)
+            file.save(file_path)
+            blob.upload_from_filename(file_path)
+            
+            # Process uploaded file (example: text extraction and processing)
+            if filename != "dummy.jpg":
+                text = process_image(file_path)
+                kitchen_items = read_kitchen_eatables()
+                nonfood_items = nonfood_items_list()
+                irrelevant_names = irrelevant_names_list()
+                result = process_text(text, kitchen_items, nonfood_items, irrelevant_names)               
+                temp_file_path = os.path.join(temp_dir, "temp_data.json")
+                with open(temp_file_path, "w") as json_file:
+                    json.dump(result, json_file, indent=4)
+                process_json_files_folder(temp_dir)
+                # Example operations with master files
+                with open("master_nonexpired.json", "r") as f:
+                    data_nonexpired = json.load(f)
+                create_master_expired_file(data_nonexpired)
+                # Upload processed data to storage
+                upload_result_to_storage(result )
+                upload_master_nonexpired_to_storage(data_nonexpired )
+                with open("master_expired.json", "r") as f:
+                    data_expired = json.load(f)
+                upload_master_expired_to_storage(data_expired )
+                try:
+                    # Attempt to delete the file if it exists
+                    blob.reload() # Ensure the file still exists before deleting
+                    blob.delete()
+                except NotFound:
+                    print("File not found during deletion, skipping.")
+            return jsonify({"message": "File uploaded and processed successfully"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # Function to read a JSON file and return its contents
 def read_json_file(file_path):

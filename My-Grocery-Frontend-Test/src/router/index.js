@@ -8,13 +8,13 @@ import AboutUs from "../views/AboutUs";
 import ItemsInventory from "../views/ItemsInventory";
 import AccountPage from "../views/AccountPage";
 import OrdersHistory from "../views/OrdersHistory";
-import RecipePage from "../components/Layout/RecipePage";
+import RecipePage from "../components/RecipePage";
 import FAQPage from "../views/FAQs";
 import BarcodeScan from "../views/BarcodeScan";
 import Search from "../components/SearchInventory.vue";
 import HealthPage from "../components/HealthPage.vue";
 import UserDefinedPrompt from "../components/UserDefinedPrompt.vue";
-import FirebaseAuth from "../FirbaseAuth/LoginSigup.vue";
+import FirebaseAuth from "../components/LoginSigup.vue";
 
 Vue.use(VueRouter);
 

@@ -16,7 +16,7 @@ export default {
   data() {
     return {
       selectedFile: "",
-      localCurrentUser: this.currentUser,
+      // localCurrentUser: this.currentUser,
     };
   },
   methods: {
@@ -24,16 +24,16 @@ export default {
       const fileToUpload = dummyFile || this.selectedFile;
       console.log("File to upload:", fileToUpload);
 
-      if (fileToUpload && this.localCurrentUser) {
+      if (fileToUpload) {
         const formData = new FormData();
         formData.append("file", fileToUpload);
-        formData.append("email", this.localCurrentUser.email);
+        // formData.append("email", this.localCurrentUser.email);
 
-        console.log(
-          "FormData before sending:",
-          formData.get("file"),
-          formData.get("email")
-        );
+        // console.log(
+        //   "FormData before sending:",
+        //   formData.get("file"),
+        //   formData.get("email")
+        // );
 
         axiosInstance
           .post("/image-process-upload-create", formData, {
@@ -59,27 +59,27 @@ export default {
         );
       }
     },
-    simulateUpload(user) {
-      if (user) {
-        this.localCurrentUser = user;
-      }
-      if (this.localCurrentUser) {
-        this.uploadImageProcessDummy();
-      } else {
-        const dummyFile = new File(["dummy content"], "dummy.jpg", {
-          type: "image/jpeg",
-        });
-        console.log("Simulating upload with dummy file:", dummyFile);
-        this.uploadImageProcessDummy(dummyFile);
-        console.log("simulateUpload function called!");
-      }
+    simulateUpload() {
+      // if (user) {
+      //   this.localCurrentUser = user;
+      // }
+      // if (this.localCurrentUser) {
+      //   this.uploadImageProcessDummy();
+      // } else {
+      const dummyFile = new File(["dummy content"], "dummy.jpg", {
+        type: "image/jpeg",
+      });
+      console.log("Simulating upload with dummy file:", dummyFile);
+      this.uploadImageProcessDummy(dummyFile);
+      console.log("simulateUpload function called!");
+      // }
     },
   },
-  watch: {
-    currentUser(newUser) {
-      this.localCurrentUser = newUser;
-    },
-  },
+  // watch: {
+  //   currentUser(newUser) {
+  //     this.localCurrentUser = newUser;
+  //   },
+  // },
 };
 </script>
 

@@ -227,6 +227,8 @@
 </template>
 
 <script>
+import { firebaseApp } from "@/Firebase"; // Adjust the path as necessary
+
 const baseUrl = "http://127.0.0.1:8081";
 
 export default {
@@ -291,12 +293,20 @@ export default {
   methods: {
     async fetchData(type, endpoint, property) {
       try {
+        const currentUser = firebaseApp.auth().currentUser;
+        if (!currentUser) {
+          throw new Error("User not authenticated");
+        }
+        const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
+        console.log("idToken", idToken);
+
         this.loading = true;
         let response;
         if (type === "json") {
           response = await fetch(baseUrl + endpoint, {
             method: "GET",
             headers: {
+              Authorization: `Bearer ${idToken}`,
               "Content-Type": "application/json",
             },
           });
@@ -312,7 +322,6 @@ export default {
         } else {
           throw new Error("Invalid request type.");
         }
-
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -331,6 +340,8 @@ export default {
         this.loading = false;
       } catch (error) {
         this.error = error.message;
+        console.error("Error in fetchData:", error);
+        this.loading = false;
       }
     },
   },

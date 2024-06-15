@@ -33,7 +33,7 @@ export default {
           price: "$10",
           offer: "20% Off",
           image:
-            "https://th.bing.com/th?id=OLC.yKDSEt/hxdwvXg480x360&rs=1&pid=ImgDetMain",
+            "https://th.bing.com/th?id=OIP.2dhr5Ln6cMHIu9SmwE_uBgHaE7&w=306&h=204&c=8&rs=1&qlt=90&o=6&dpr=1.5&pid=3.1&rm=2",
         },
         {
           id: 2,
@@ -42,7 +42,7 @@ export default {
           price: "$8",
           offer: "Buy One Get One Free",
           image:
-            "https://th.bing.com/th?id=OIF.B%2fQ4bME2%2bVyKb7EwhTEW4Q&rs=1&pid=ImgDetMain",
+            "https://th.bing.com/th?id=OIP.F6VyuMUgr0Rx8wTNPJ8mBAHaIu&w=230&h=271&c=8&rs=1&qlt=90&o=6&dpr=1.5&pid=3.1&rm=2",
         },
         {
           id: 3,

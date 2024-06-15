@@ -18,9 +18,6 @@
           show-password
           style="margin-bottom: 20px"
         ></el-input>
-        <el-button @click="signInWithEmailPassword"
-          >Sign in with Email</el-button
-        >
         <el-button @click="signUpWithEmailPassword"
           >Sign up with Email</el-button
         >
@@ -48,13 +45,10 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  setPersistence,
-  browserSessionPersistence,
   onAuthStateChanged,
   signOut as firebaseSignOut,
 } from "firebase/auth";
-import { auth } from "./Firebase.js"; // Assuming this is your Firebase initialization file
+import { auth } from "../Firebase.js"; // Assuming this is your Firebase initialization file
 
 export default {
   name: "LoginSignup",
@@ -64,7 +58,6 @@ export default {
       password: "",
       users: JSON.parse(localStorage.getItem("users")) || [],
       currentUser: null,
-      initialAuthCheck: true,
     };
   },
   mounted() {
@@ -72,13 +65,6 @@ export default {
   },
   methods: {
     checkAuth() {
-      setPersistence(auth, browserSessionPersistence)
-        .then(() => {
-          // In this case, signInWithPopup will use the persistence set by setPersistence
-        })
-        .catch((error) => {
-          console.error("Error setting persistence:", error);
-        });
       onAuthStateChanged(auth, (user) => {
         if (user) {
           this.currentUser = user;
@@ -86,7 +72,6 @@ export default {
         } else {
           console.log("No user is logged in");
         }
-        this.initialAuthCheck = false;
       });
     },
     async signUpWithEmailPassword() {
@@ -103,35 +88,18 @@ export default {
           this.users.push(user);
           localStorage.setItem("users", JSON.stringify(this.users));
         }
+        // Send the ID token to the server
+        const idToken = await user.getIdToken();
         await fetch("http://127.0.0.1:8081/api/set-email", {
-          email: user.email,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: user.email, idToken }),
         });
         this.currentUser = user;
-        this.createUserFolder();
       } catch (error) {
         console.error("Error signing up:", error);
-      }
-    },
-    async signInWithEmailPassword() {
-      try {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          this.email,
-          this.password
-        );
-        const user = userCredential.user;
-        console.log("User signed in:", user);
-        // Add user to the users array if not already present
-        if (!this.users.some((u) => u.uid === user.uid)) {
-          this.users.push(user);
-          localStorage.setItem("users", JSON.stringify(this.users));
-        }
-        await fetch("http://127.0.0.1:8081/api/set-email", {
-          email: user.email,
-        });
-        this.currentUser = user;
-      } catch (error) {
-        console.error("Error signing in:", error);
       }
     },
     async signInWithGoogle() {
@@ -145,13 +113,14 @@ export default {
           this.users.push(user);
           localStorage.setItem("users", JSON.stringify(this.users));
         }
-        // Send the email to the server to store it in the session
+        // Send the ID token to the server
+        const idToken = await user.getIdToken();
         await fetch("http://127.0.0.1:8081/api/set-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email: user.email }),
+          body: JSON.stringify({ email: user.email, idToken }),
         });
         this.currentUser = user;
       } catch (error) {
@@ -165,38 +134,6 @@ export default {
         console.log("Switched to user:", user);
       } else {
         console.error("User not found");
-      }
-    },
-    async createUserFolder() {
-      const user = this.currentUser;
-      if (user) {
-        const userEmail = user.email;
-        try {
-          const formData = new FormData();
-          formData.append("email", userEmail);
-          formData.append(
-            "file",
-            new Blob([""], { type: "text/plain" }),
-            "dummy.jpg"
-          ); // dummy file
-          const response = await fetch(
-            "http://127.0.0.1:8081/api/image-process-upload-create",
-            {
-              method: "POST",
-              body: formData,
-            }
-          );
-          if (response.ok) {
-            const data = await response.json();
-            console.log(data.message);
-          } else {
-            console.error("Error creating user folder:", response.status);
-          }
-        } catch (error) {
-          console.error("Fetch error:", error);
-        }
-      } else {
-        console.error("User not logged in");
       }
     },
     async signOut() {

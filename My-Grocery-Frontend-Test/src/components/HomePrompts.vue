@@ -227,8 +227,9 @@
 </template>
 
 <script>
-import { firebaseApp } from "@/Firebase"; // Adjust the path as necessary
-
+// import { firebaseApp } from "@/Firebase"; // Adjust the path as necessary
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../Firebase.js";
 const baseUrl = "http://127.0.0.1:8081";
 
 export default {
@@ -251,6 +252,7 @@ export default {
       displayFoodHandling: "true",
       loading: false,
       error: false,
+      currentUser: null,
     };
   },
   async mounted() {
@@ -291,9 +293,19 @@ export default {
     }
   },
   methods: {
+    checkAuth() {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          this.currentUser = user;
+          console.log("User is logged in:", user);
+        } else {
+          console.log("No user is logged in");
+        }
+      });
+    },
     async fetchData(type, endpoint, property) {
       try {
-        const currentUser = firebaseApp.auth().currentUser;
+        const currentUser = this.$firebaseApp.auth().currentUser;
         if (!currentUser) {
           throw new Error("User not authenticated");
         }
@@ -306,9 +318,9 @@ export default {
           response = await fetch(baseUrl + endpoint, {
             method: "GET",
             headers: {
-              Authorization: `Bearer ${idToken}`,
               "Content-Type": "application/json",
             },
+            body: JSON.stringify({ idToken }),
           });
         } else if (type === "gpt") {
           await fetch(baseUrl + endpoint, {

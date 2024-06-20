@@ -90,7 +90,7 @@ export default {
         }
         // Send the ID token to the server
         const idToken = await user.getIdToken();
-        await fetch("http://127.0.0.1:8081/api/set-email", {
+        await fetch("http://127.0.0.1:8081/api/set-email-create", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -115,7 +115,7 @@ export default {
         }
         // Send the ID token to the server
         const idToken = await user.getIdToken();
-        await fetch("http://127.0.0.1:8081/api/set-email", {
+        await fetch("http://127.0.0.1:8081/api/set-email-create", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

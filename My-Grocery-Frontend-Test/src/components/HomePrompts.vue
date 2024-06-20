@@ -227,9 +227,9 @@
 </template>
 
 <script>
-// import { firebaseApp } from "@/Firebase"; // Adjust the path as necessary
-import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../Firebase.js";
+import { onAuthStateChanged } from "firebase/auth"; // Correctly import onAuthStateChanged from firebase/auth
+
 const baseUrl = "http://127.0.0.1:8081";
 
 export default {
@@ -253,59 +253,68 @@ export default {
       loading: false,
       error: false,
       currentUser: null,
+      errorMessage: null,
     };
   },
   async mounted() {
-    try {
-      await this.fetchData(
-        "json",
-        "/api/ethical-eating-suggestion-using-json",
-        "ethicalEatingSuggestions"
-      );
-      await this.fetchData("json", "/api/get-fun-facts-using-json", "funFacts");
-      await this.fetchData(
-        "json",
-        "/api/food-waste-reduction-using-json",
-        "foodWasteReductionSuggestions"
-      );
-      await this.fetchData(
-        "json",
-        "/api/food-handling-advice-using-json",
-        "handlingadvice"
-      );
-      await this.fetchData(
-        "json",
-        "/api/current-trends-using-json",
-        "currentTrends"
-      );
-      await this.fetchData(
-        "json",
-        "/api/cooking-tips-using-json",
-        "cookingTips"
-      );
-      await this.fetchData(
-        "json",
-        "/api/mood-changer-using-json",
-        "moodChangerSuggestions"
-      );
-    } catch (error) {
-      console.error("Error loading data:", error);
-    }
+    // Check authentication state
+    this.checkAuthState();
   },
   methods: {
-    checkAuth() {
-      onAuthStateChanged(auth, (user) => {
+    async checkAuthState() {
+      onAuthStateChanged(auth, async (user) => {
         if (user) {
           this.currentUser = user;
-          console.log("User is logged in:", user);
+          console.log("User is logged in:", user.email);
+          // Fetch data only after user is authenticated
+          try {
+            await this.fetchData(
+              "json",
+              "/api/ethical-eating-suggestion-using-json",
+              "ethicalEatingSuggestions"
+            );
+            await this.fetchData(
+              "json",
+              "/api/get-fun-facts-using-json",
+              "funFacts"
+            );
+            await this.fetchData(
+              "json",
+              "/api/food-waste-reduction-using-json",
+              "foodWasteReductionSuggestions"
+            );
+            await this.fetchData(
+              "json",
+              "/api/food-handling-advice-using-json",
+              "handlingadvice"
+            );
+            await this.fetchData(
+              "json",
+              "/api/current-trends-using-json",
+              "currentTrends"
+            );
+            await this.fetchData(
+              "json",
+              "/api/cooking-tips-using-json",
+              "cookingTips"
+            );
+            await this.fetchData(
+              "json",
+              "/api/mood-changer-using-json",
+              "moodChangerSuggestions"
+            );
+          } catch (error) {
+            console.error("Error loading data:", error);
+          }
         } else {
           console.log("No user is logged in");
+          this.currentUser = null;
         }
       });
     },
     async fetchData(type, endpoint, property) {
       try {
-        const currentUser = this.$firebaseApp.auth().currentUser;
+        const currentUser = auth.currentUser;
         if (!currentUser) {
           throw new Error("User not authenticated");
         }
@@ -319,28 +328,34 @@ export default {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
             },
-            body: JSON.stringify({ idToken }),
           });
         } else if (type === "gpt") {
           await fetch(baseUrl + endpoint, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
             },
             body: JSON.stringify({}),
           });
-          response = await fetch(baseUrl + endpoint);
+          response = await fetch(baseUrl + endpoint, {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
         } else {
           throw new Error("Invalid request type.");
         }
+
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
+
         const data = await response.json();
-        // Log the entire data object for inspection
         console.log("Data Received:", data);
-        // Check if the property exists in the data object
+
         if (property in data) {
           this[property] = data[property] || [];
           console.log(data[property]);
@@ -349,9 +364,10 @@ export default {
             `Property '${property}' not found in the server response.`
           );
         }
+
         this.loading = false;
       } catch (error) {
-        this.error = error.message;
+        this.errorMessage = error.message;
         console.error("Error in fetchData:", error);
         this.loading = false;
       }

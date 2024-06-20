@@ -32,8 +32,8 @@ from dotenv import load_dotenv
 from firebase_admin import credentials, firestore, initialize_app, auth
 
 # Initialize Firebase
-service_account_key_path = "C:/Users/jalal/Downloads/my-grocery-test-mac/my-grocery-backend-Test/my-grocery-home-745726ebbfac.json"
-app_default_credentials_path = "C:/Users/jalal/Downloads/my-grocery-test-mac/my-grocery-backend-Test/application_default_credentials.json"
+service_account_key_path = "/Users/jalaljanjua/Desktop/my-grocery-test-mac/my-grocery-backend-Test/my-grocery-home-745726ebbfac.json"
+app_default_credentials_path = "/Users/jalaljanjua/Desktop/my-grocery-test-mac/my-grocery-backend-Test/application_default_credentials.json"
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Set environment variables
@@ -48,21 +48,17 @@ app = Flask(__name__)
 CORS(app, methods=["GET", "POST"], supports_credentials=True)
 
 # Initialize Firestore and Storage
-cred = credentials.Certificate("C:/Users/jalal/Downloads/my-grocery-test-mac/my-grocery-backend-Test/my-grocery-home-firebase-adminsdk-hdtde-eb31bbe2f8.json")
+cred = credentials.Certificate("/Users/jalaljanjua/Desktop/my-grocery-test-mac/my-grocery-backend-Test/my-grocery-home-firebase-adminsdk-hdtde-3b0731d354.json")
 initialize_app(cred)
 db = firestore.client()
 storage_client = storage.Client()
 bucket_name = "grocery-bucket"
 
-# Initialize Session
-# app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-# app.config["SESSION_TYPE"] = "filesystem"
-# Session(app)
-
-@app.route('/api/set-email', methods=['POST'])
-def set_email():
+@app.route('/api/set-email-create', methods=['POST'])
+def set_email_create():
     data = request.get_json()
     id_token = data['idToken']
+    print(id_token)
     
     try:
         # Verify the ID token
@@ -89,28 +85,6 @@ def set_email():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-# @app.route("/api/set-email", methods=["POST", "GET"])
-# def set_email():
-#     data = request.get_json()
-#     user_email = data.get("email")
-#     if not user_email:
-#         return jsonify({"error": "Email is required"}), 400
-#     session["user_email"] = user_email
-#     app.logger.debug(f"Email set in session: {session['user_email']}")
-#     return jsonify({"message": "Email set in session"}), 200
-
-# def create_user_folder(user_email):
-#     app.logger.debug(f"Email provided: {user_email}")
-#     app.logger.debug(f"Session content before setting email: {dict(session)}")
-#     # session['user_email'] = email
-#     app.logger.debug(f"Email set in session: {session.get('user_email')}")
-#     """Creates a folder in GCS named after the user's email."""
-#     bucket = storage_client.bucket(bucket_name)
-#     folder_name = f"user_{user_email}/"
-#     blob = bucket.blob(folder_name)
-#     blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
-#     print(f'Folder created for {user_email}')
 
 # Retrieve and use the service account key
 if service_account_key_path:
@@ -174,9 +148,18 @@ def food_handling_advice_using_json():
 
 @app.route("/api/food-handling-advice-using-gpt", methods=["GET", "POST"])
 def food_handling_advice_using_gpt():
-    with open('master_nonexpired.json', 'r') as file:
-        data = json.load(file)
-        food_items = data['Food']
+    id_token = request.headers['Authorization'].split('Bearer ')[1]  # Extract ID token from Authorization header
+    # Verify the ID token
+    decoded_token = auth.verify_id_token(id_token)
+    user_email = decoded_token['email']
+    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+    folder_name = f"user_{user_email}/ItemsList"
+    print(f"Folder name: {folder_name}")
+    json_blob_name = f"{folder_name}/master_nonexpired.json"
+    blob = bucket.blob(json_blob_name)
+    content = blob.download_as_text()
+    food_handling_advice = json.loads(content)
+    food_items = food_handling_advice['Food']
     food_items = [item for item in food_items if item['Name'] != 'TestFNE']
     # Set up openai API
     # Define a list to store advice on handling food items
@@ -198,9 +181,8 @@ def food_handling_advice_using_gpt():
         food_handling_advice.append({
             "Food Item": item['Name'],
             "Handling Advice": handling_advice
-        })    
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
+        })
+    folder_name = f"user_{user_email}/ChatGPT/HomePage"
     json_blob_name = f"{folder_name}/food_handling_advice.json"
     blob = bucket.blob(json_blob_name)
     try:

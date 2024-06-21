@@ -59,30 +59,24 @@ def set_email_create():
     data = request.get_json()
     id_token = data['idToken']
     print(id_token)
-    
     try:
         # Verify the ID token
         decoded_token = auth.verify_id_token(id_token)
         uid = decoded_token['uid']
         email = decoded_token['email']  # Retrieve email directly from decoded token
-        
         # Retrieve user data from Firestore
         db = firestore.client()
         user_ref = db.collection('users').document(uid)
         user_doc = user_ref.get()
-        
         if not user_doc.exists:
             # Store user email in Firestore if not already stored
             user_ref.set({'email': email})
-        
         # Create a folder for the user using the email address in Google Cloud Storage
         bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
         folder_name = f"user_{email}/"
         blob = bucket.blob(folder_name)  # Creating a file as a placeholder
         blob.upload_from_string('')  # Upload an empty string to create the folder
-        
         return jsonify({'message': 'User email and folder created successfully', 'email': email}), 200
-    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -123,45 +117,38 @@ date_record = list()
 # Homepage (cooking_tips, current_trends, ethical_eating_suggestions, food_waste_reductions,
 # generated_func_facts, joke, mood_changer)
 ##############################################################################################################################################################################
-
+def get_user_email_from_token():
+    try:
+        id_token = request.headers['Authorization'].split('Bearer ')[1]  # Extract ID token from Authorization header
+        decoded_token = auth.verify_id_token(id_token)  # Verify the ID token
+        return decoded_token['email']
+    except Exception as e:
+        raise Exception(f"Failed to get user email from token: {str(e)}")
+    
 @app.route("/api/food-handling-advice-using-json", methods=["GET"])
 def food_handling_advice_using_json():
     try:
-        id_token = request.headers['Authorization'].split('Bearer ')[1]  # Extract ID token from Authorization header
-        # Verify the ID token
-        decoded_token = auth.verify_id_token(id_token)
-        user_email = decoded_token['email']
-        
+        user_email = get_user_email_from_token()
         bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
         folder_name = f"user_{user_email}/ChatGPT/HomePage"
-        print(f"Folder name: {folder_name}")
         json_blob_name = f"{folder_name}/food_handling_advice.json"
         blob = bucket.blob(json_blob_name)
-        
         content = blob.download_as_text()
         food_handling_advice = json.loads(content)
-        
         return jsonify({"handlingadvice": food_handling_advice})
-    
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 @app.route("/api/food-handling-advice-using-gpt", methods=["GET", "POST"])
 def food_handling_advice_using_gpt():
-    id_token = request.headers['Authorization'].split('Bearer ')[1]  # Extract ID token from Authorization header
-    # Verify the ID token
-    decoded_token = auth.verify_id_token(id_token)
-    user_email = decoded_token['email']
+    user_email = get_user_email_from_token()
     bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
     folder_name = f"user_{user_email}/ItemsList"
-    print(f"Folder name: {folder_name}")
     json_blob_name = f"{folder_name}/master_nonexpired.json"
     blob = bucket.blob(json_blob_name)
     content = blob.download_as_text()
     food_handling_advice = json.loads(content)
     food_items = food_handling_advice['Food']
     food_items = [item for item in food_items if item['Name'] != 'TestFNE']
-    # Set up openai API
     # Define a list to store advice on handling food items
     food_handling_advice = []
     # Loop to generate advice for all food items
@@ -193,193 +180,177 @@ def food_handling_advice_using_gpt():
         return jsonify({"handlingadvice": food_handling_advice})
     except Exception as e:
         return jsonify({"error": str(e)})
-
+    
 @app.route("/api/food-waste-reduction-using-json", methods=["GET"])
 def food_waste_reduction_using_json():
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/Food_Waste_Reduction_Suggestions.json"
-    blob = bucket.blob(json_blob_name)
     try:
-        # Download the content of the file
+        user_email = get_user_email_from_token()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/Food_Waste_Reduction_Suggestions.json"
+        blob = bucket.blob(json_blob_name)
         content = blob.download_as_text()
         Food_Waste_Reduction_Suggestions = json.loads(content)
         return jsonify({"foodWasteReductionSuggestions": Food_Waste_Reduction_Suggestions})
     except Exception as e:
-        return jsonify({"error": str(e)})
-
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/food-waste-reduction-using-gpt", methods=["GET", "POST"])
 def food_waste_reduction():
-    user_input = request.json.get("user_input", "Suggest a recipe that helps reduce food waste.")
-    # Set up client API
-    # Define a list to store Food Waste Reduction suggestions
-    food_waste_reduction_list = []
-    # Define the number of suggestions you want to generate
-    num_suggestions = 1
-    # Loop to generate Food Waste Reduction suggestions
-    for _ in range(num_suggestions):
-        time.sleep(20)
-        # Generate a random prompt for Food Waste Reduction
-        prompt = f"{user_input}"
-        response = openai.completions.create(model="gpt-3.5-turbo-instruct",
-        prompt=prompt,
-        max_tokens=3000,
-        temperature=0.6,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0)
-        food_waste_reduction_suggestion = response.choices[0].text.strip()
-        food_waste_reduction_list.append(
-            {
+    try:
+        user_email = get_user_email_from_token()
+        user_input = request.json.get("user_input", "Suggest a recipe that helps reduce food waste.")
+        food_waste_reduction_list = []
+        num_suggestions = 1
+        for _ in range(num_suggestions):
+            time.sleep(20)
+            prompt = f"{user_input}"
+            response = openai.completions.create(model="gpt-3.5-turbo-instruct",
+            prompt=prompt,
+            max_tokens=3000,
+            temperature=0.6,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0)
+            food_waste_reduction_suggestion = response.choices[0].text.strip()
+            food_waste_reduction_list.append({
                 "Prompt": prompt,
                 "Food Waste Reduction Suggestion": food_waste_reduction_suggestion,
-            }
-        )
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/Food_Waste_Reduction_Suggestions.json"
-    blob = bucket.blob(json_blob_name)
-    try:
-        # Download the content of the file
+            })
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/Food_Waste_Reduction_Suggestions.json"
+        blob = bucket.blob(json_blob_name)
         blob.upload_from_string(json.dumps(food_waste_reduction_list), content_type="application/json")
         content = blob.download_as_text()
         Food_Waste_Reduction_Suggestions = json.loads(content)
         return jsonify({"foodWasteReductionSuggestions": Food_Waste_Reduction_Suggestions})
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/ethical-eating-suggestion-using-json", methods=["GET"])
 def ethical_eating_using_json():
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/Ethical_Eating_Suggestions.json"
-    blob = bucket.blob(json_blob_name)
     try:
-        # Download the content of the file
+        user_email = get_user_email_from_token()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/Ethical_Eating_Suggestions.json"
+        blob = bucket.blob(json_blob_name)
         content = blob.download_as_text()
         ethical_eating_list = json.loads(content)
         return jsonify({"ethicalEatingSuggestions": ethical_eating_list})
     except Exception as e:
-        return jsonify({"error": str(e)})
-
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/ethical-eating-suggestion-using-gpt", methods=["POST", "GET"])
 def ethical_eating_suggestion_using_gpt():
-    # Load data from JSON
-    with open("master_nonexpired.json", "r") as file:
-        data = json.load(file)
-    food_items = data['Food']
-    # Set up client API
-    # Define a list to store prompts and ethical eating suggestions
-    ethical_eating_list = []
-    # Define the number of prompts/suggestions you want to generate
-    num_prompts = 1
-    # Loop to generate prompts and ethical eating suggestions
-    for _ in range(num_prompts):
-        group_of_items = [item['Name'] for item in food_items[:5]]  # Change the slicing as needed
-        prompt = 'Consider the ethical aspects of the following ingredients:\n\n'
-        for item in group_of_items:
-            prompt += f'- {item}\n'
-        # Remove "- TestFNE" from the prompt
-        prompt = prompt.replace("- TestFNE\n", "")
-        response = openai.completions.create(model="gpt-3.5-turbo-instruct",
-        prompt=prompt,
-        max_tokens=300,
-        temperature=0.6,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0)
-        ethical_suggestion = response.choices[0].text.strip()
-        # Extract a group of items, excluding 'TestFNE'
-        group_of_items = [item["Name"] for item in food_items if item["Name"] != "TestFNE"]
-        ethical_eating_list.append({
-            "Group of Items": group_of_items,
-            "Ethical Eating Suggestions": ethical_suggestion
-        })
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/Ethical_Eating_Suggestions.json"
-    blob = bucket.blob(json_blob_name)
     try:
+        user_email = get_user_email_from_token()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ItemsList"
+
+        json_blob_name = f"{folder_name}/master_nonexpired.json"
+        blob = bucket.blob(json_blob_name)
+        content = blob.download_as_text()
+        ethical_eating_list = json.loads(content)
+        food_items = ethical_eating_list['Food']
+        ethical_eating_list = []
+        num_prompts = 1
+        for _ in range(num_prompts):
+            group_of_items = [item['Name'] for item in food_items[:5]]
+            prompt = 'Consider the ethical aspects of the following ingredients:\n\n'
+            for item in group_of_items:
+                prompt += f'- {item}\n'
+            prompt = prompt.replace("- TestFNE\n", "")
+            response = openai.completions.create(model="gpt-3.5-turbo-instruct",
+            prompt=prompt,
+            max_tokens=300,
+            temperature=0.6,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0)
+            ethical_suggestion = response.choices[0].text.strip()
+            group_of_items = [item["Name"] for item in food_items if item["Name"] != "TestFNE"]
+            ethical_eating_list.append({
+                "Group of Items": group_of_items,
+                "Ethical Eating Suggestions": ethical_suggestion
+            })
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/Ethical_Eating_Suggestions.json"
+        blob = bucket.blob(json_blob_name)
         blob.upload_from_string(json.dumps(ethical_eating_list), content_type="application/json")
-        # Download the content of the file
         content = blob.download_as_text()
         ethical_eating_list = json.loads(content)
         return jsonify({"ethicalEatingSuggestions": ethical_eating_list})
     except Exception as e:
-        return jsonify({"error": str(e)})
-    
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/get-fun-facts-using-json", methods=["GET"])
 def get_fun_facts_using_json():
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/generated_fun_facts.json"
-    blob = bucket.blob(json_blob_name)
     try:
-        # Download the content of the file
+        user_email = get_user_email_from_token()
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/generated_fun_facts.json"
+        blob = bucket.blob(json_blob_name)
         content = blob.download_as_text()
         Fun_Facts = json.loads(content)
         return jsonify({"funFacts": Fun_Facts})
     except Exception as e:
-        return jsonify({"error": str(e)})
-
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/get-fun-facts-using-gpt", methods=["GET", "POST"])
 def get_fun_facts():
-    # Load data from JSON
-    with open("master_nonexpired.json", "r") as file:
-        data = json.load(file)
-        food_items = data['Food']
-    food_items = [item for item in food_items if item['Name'] != 'TestFNE']
-    # Set up client API
-    # Define a list to store fun facts
-    fun_facts = []
-    # Define the number of fun facts you want to generate
-    num_fun_facts = 3
-    # Loop to generate multiple fun facts
-    for _ in range(num_fun_facts):
-        # Randomly select a food item
-        selected_item = random.choice(food_items)      
-        prompt = f"Retrieve fascinating and appealing information about the following foods: {selected_item['Name']}: Include unique facts, health benefits, and any intriguing stories associated with each."      
-        response = openai.completions.create(model="gpt-3.5-turbo-instruct",
-        prompt=prompt,
-        max_tokens=500,
-        temperature=0.6,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0)
-        fun_fact = response.choices[0].text.strip()     
-        fun_facts.append({
-            "Food Item": selected_item['Name'],
-            "Fun Facts": fun_fact
-        })
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/generated_fun_facts.json"
-    blob = bucket.blob(json_blob_name)
-    try:       
+    try:
+        user_email = get_user_email_from_token()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ItemsList"
+        json_blob_name = f"{folder_name}/master_nonexpired.json"
+        blob = bucket.blob(json_blob_name)
+        content = blob.download_as_text()
+        Fun_Facts = json.loads(content)
+        food_items = Fun_Facts['Food']
+        food_items = [item for item in food_items if item['Name'] != 'TestFNE']
+        fun_facts = []
+        num_fun_facts = 3
+        for _ in range(num_fun_facts):
+            selected_item = random.choice(food_items)
+            prompt = f"Retrieve fascinating and appealing information about the following foods: {selected_item['Name']}: Include unique facts, health benefits, and any intriguing stories associated with each."
+            response = openai.completions.create(model="gpt-3.5-turbo-instruct",
+            prompt=prompt,
+            max_tokens=500,
+            temperature=0.6,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0)
+            fun_fact = response.choices[0].text.strip()
+            fun_facts.append({
+                "Food Item": selected_item['Name'],
+                "Fun Facts": fun_fact
+            })
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/generated_fun_facts.json"
+        blob = bucket.blob(json_blob_name)
         blob.upload_from_string(json.dumps(fun_facts), content_type="application/json")
-        # Download the content of the file
         content = blob.download_as_text()
         Fun_Facts = json.loads(content)
         return jsonify({"funFacts": Fun_Facts})
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/cooking-tips-using-json", methods=["GET"])
 def cooking_tips_using_json():
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/Cooking_Tips.json"
-    blob = bucket.blob(json_blob_name)
     try:
-        # Download the content of the file
+        user_email = get_user_email_from_token()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/Cooking_Tips.json"
+        blob = bucket.blob(json_blob_name)
         content = blob.download_as_text()
         Cooking_Tips = json.loads(content)
         return jsonify({"cookingTips": Cooking_Tips})
     except Exception as e:
-        return jsonify({"error": str(e)})
-
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/cooking-tips-using-gpt", methods=["GET", "POST"])
 def cooking_tips():
     Cooking_Tips_List = []
@@ -398,9 +369,9 @@ def cooking_tips():
         presence_penalty=0.0)
         tip = response.choices[0].text.strip()
         Cooking_Tips_List.append({"Prompt": prompt, "Cooking Tip": tip})
-    storage_client = storage.Client()
+    user_email = get_user_email_from_token()
     bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
+    folder_name = f"user_{user_email}/ChatGPT/HomePage"
     json_blob_name = f"{folder_name}/Cooking_Tips.json"
     blob = bucket.blob(json_blob_name)
     try:
@@ -414,18 +385,17 @@ def cooking_tips():
 
 @app.route("/api/current-trends-using-json", methods=["GET"])
 def current_trends_using_json():
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/Current_Trends.json"
-    blob = bucket.blob(json_blob_name)
     try:
-        # Download the content of the file
+        user_email = get_user_email_from_token()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/Current_Trends.json"
+        blob = bucket.blob(json_blob_name)
         content = blob.download_as_text()
         Current_Trends = json.loads(content)
         return jsonify({"currentTrends": Current_Trends})
     except Exception as e:
-        return jsonify({"error": str(e)})
-
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/current-trends-using-gpt", methods=["GET", "POST"])
 def current_trends():
     # Set up client API
@@ -446,9 +416,9 @@ def current_trends():
         presence_penalty=0.0)
         fun_fact = response.choices[0].text.strip()
         fun_facts.append({"Prompt": prompt, "Fun Facts": fun_fact})
-    storage_client = storage.Client()
+    user_email = get_user_email_from_token()
     bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
+    folder_name = f"user_{user_email}/ChatGPT/HomePage"
     json_blob_name = f"{folder_name}/Current_Trends.json"
     blob = bucket.blob(json_blob_name)
     try:
@@ -462,18 +432,17 @@ def current_trends():
 
 @app.route("/api/mood-changer-using-json", methods=["GET"])
 def mood_changer_using_json():
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/Mood_Changer.json"
-    blob = bucket.blob(json_blob_name)
     try:
-        # Download the content of the file
+        user_email = get_user_email_from_token()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/Mood_Changer.json"
+        blob = bucket.blob(json_blob_name)
         content = blob.download_as_text()
         Mood_Changer = json.loads(content)
         return jsonify({"moodChangerSuggestions": Mood_Changer})
     except Exception as e:
-        return jsonify({"error": str(e)})
-
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/mood-changer-using-gpt", methods=["GET", "POST"])
 def mood_changer_using_gpt():   
     user_mood = request.json.get("user_mood", "Sad, I'm feeling tired, I'm going to bed")
@@ -504,9 +473,9 @@ def mood_changer_using_gpt():
                 "Food Suggestion": food_suggestion,
             }
         )
-    storage_client = storage.Client()
+    user_email = get_user_email_from_token()
     bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
+    folder_name = f"user_{user_email}/ChatGPT/HomePage"
     json_blob_name = f"{folder_name}/Mood_Changer.json"
     blob = bucket.blob(json_blob_name)
     try:
@@ -520,18 +489,17 @@ def mood_changer_using_gpt():
 
 @app.route("/api/jokes-using-json", methods=["GET"])
 def jokes_json():
-    bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
-    json_blob_name = f"{folder_name}/Joke.json"
-    blob = bucket.blob(json_blob_name)
     try:
-        # Download the content of the file
+        user_email = get_user_email_from_token()
+        bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
+        folder_name = f"user_{user_email}/ChatGPT/HomePage"
+        json_blob_name = f"{folder_name}/Joke.json"
+        blob = bucket.blob(json_blob_name)
         content = blob.download_as_text()
         jokes = json.loads(content)
         return jsonify({"jokes": jokes})
     except Exception as e:
-        return jsonify({"error": str(e)})
-
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/jokes-using-gpt", methods=["GET", "POST"])
 def jokes():
     # Set up client API
@@ -553,8 +521,9 @@ def jokes():
         presence_penalty=0.0)
         joke = response.choices[0].text.strip()
         Health_Advice_List.append({"Prompt": prompt, "Food Joke": joke})  
+    user_email = get_user_email_from_token()
     bucket = storage_client.bucket(os.environ["BUCKET_NAME"])
-    folder_name = "owner_data/ChatGPT/HomePage"
+    folder_name = f"user_{user_email}/ChatGPT/HomePage"
     json_blob_name = f"{folder_name}/Joke.json"
     blob = bucket.blob(json_blob_name)
     try:

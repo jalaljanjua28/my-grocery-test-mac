@@ -8,11 +8,11 @@ import AboutUs from "../views/AboutUs";
 import ItemsInventory from "../views/ItemsInventory";
 import AccountPage from "../views/AccountPage";
 import OrdersHistory from "../views/OrdersHistory";
-import RecipePage from "../components/RecipePage";
+import RecipePage from "../views/RecipePage";
 import FAQPage from "../views/FAQs";
 import BarcodeScan from "../views/BarcodeScan";
 import Search from "../components/SearchInventory.vue";
-import HealthPage from "../components/HealthPage.vue";
+import HealthPage from "../views/HealthPage.vue";
 import UserDefinedPrompt from "../components/UserDefinedPrompt.vue";
 import FirebaseAuth from "../components/LoginSigup.vue";
 

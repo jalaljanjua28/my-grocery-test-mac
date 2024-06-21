@@ -10,7 +10,7 @@
 
 <script>
 import BarcodeDummy from "@/views/BarcodeDummy.vue";
-import HomePage from "./HomePage.vue";
+import HomePage from "../views/HomePage.vue";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export default {

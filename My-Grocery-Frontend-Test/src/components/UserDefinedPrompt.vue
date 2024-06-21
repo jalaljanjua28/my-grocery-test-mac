@@ -1,7 +1,7 @@
 <template>
   <div>
     <router-link to="/" style="text-decoration: none">
-      <el-page-header content="User Defined Prompt"> </el-page-header>
+      <el-page-header content="User Defined Prompt"></el-page-header>
     </router-link>
     <el-main class="main-content">
       <el-card>
@@ -46,7 +46,7 @@
           <div
             v-for="(suggestion, index) in foodWasteReductionSuggestions"
             :key="index"
-            :body-style="{ height: 'auto' }"
+            :style="{ height: 'auto' }"
           >
             <p>
               <strong>Food Waste Reduction Suggestion:</strong>
@@ -54,7 +54,7 @@
             </p>
           </div>
           <el-alert
-            v-if="suggestions && suggestions.length === 0"
+            v-if="foodWasteReductionSuggestions.length === 0"
             title="No Suggestions"
             type="info"
             show-icon
@@ -69,18 +69,17 @@
                 :key="index"
               >
                 <p>
-                  <strong>Food Suggestion: </strong
-                  >{{ suggestion["Food Suggestion"] }}
+                  <strong>Food Suggestion: </strong>
+                  {{ suggestion["Food Suggestion"] }}
                 </p>
               </div>
-            </div>
-            <div v-if="displayMood.length === 0 && !loading">
               <el-alert
-                title="No Mood Changer Suggestion"
+                v-if="moodChangerSuggestions.length === 0"
+                title="No Mood Changer Suggestions"
                 type="info"
                 show-icon
               >
-                No Mood Changer Suggestion available.
+                No Mood Changer suggestions available.
               </el-alert>
             </div>
           </div>
@@ -92,11 +91,27 @@
               {{ suggestion["Fusion Cuisine Suggestion"] }}
             </p>
           </div>
+          <el-alert
+            v-if="fusionSuggestions.length === 0"
+            title="No Fusion Cuisine Suggestions"
+            type="info"
+            show-icon
+          >
+            No Fusion Cuisine suggestions available.
+          </el-alert>
         </div>
         <div v-if="displayDishes && !loading">
           <div v-for="(fact, index) in definedDishes" :key="index">
             <p><strong>Fun Facts:</strong> {{ fact["Fun Facts"] }}</p>
           </div>
+          <el-alert
+            v-if="definedDishes.length === 0"
+            title="No Fun Facts"
+            type="info"
+            show-icon
+          >
+            No Fun Facts available.
+          </el-alert>
         </div>
         <div v-if="displayRecipe && !loading">
           <div v-for="(recipe, index) in uniqueRecipes" :key="index">
@@ -106,6 +121,14 @@
               {{ recipe["Encouragement"] }}
             </p>
           </div>
+          <el-alert
+            v-if="uniqueRecipes.length === 0"
+            title="No Recipes"
+            type="info"
+            show-icon
+          >
+            No Recipes available.
+          </el-alert>
         </div>
       </el-card>
     </el-main>
@@ -114,36 +137,49 @@
 
 <script>
 const baseURL = "http://127.0.0.1:8081";
+import { auth } from "../Firebase.js";
+import { onAuthStateChanged } from "firebase/auth"; // Adjust import based on your Firebase setup
 
 export default {
   data() {
     return {
       selectedPrompt: "",
       selectedOption: "",
-      loading: false,
-      displayMood: "false",
-      displayWasteReduction: false,
-      displayDishes: false,
-      displayRecipe: false,
-      displaySuggestions: false,
       foodWasteReductionSuggestions: [],
       moodChangerSuggestions: [],
       fusionSuggestions: [],
       definedDishes: [],
       uniqueRecipes: [],
+      loading: false,
+      displayWasteReduction: false,
+      displayMood: false,
+      displaySuggestions: false,
+      displayDishes: false,
+      displayRecipe: false,
+      currentUser: null,
     };
   },
   methods: {
-    querySearch(queryString, cb) {
-      const options = this.loadAll();
-      const filteredOptions = options.filter((option) =>
-        option.toLowerCase().includes(queryString.toLowerCase())
-      );
-      cb(filteredOptions);
+    async checkAuthState() {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          this.currentUser = user;
+          console.log("User is logged in:", user.email);
+        } else {
+          console.log("No user is logged in");
+          this.currentUser = null;
+        }
+      }); // <-- Added closing parenthesis here
     },
-    loadAll() {
+    async querySearch(queryString, cb) {
+      let options = [];
       if (this.selectedPrompt === "foodWasteReduction") {
-        return [
+        this.displayWasteReduction = true;
+        this.displayMood = false;
+        this.displaySuggestions = false;
+        this.displayDishes = false;
+        this.displayRecipe = false;
+        options = [
           "Suggest a recipe that helps reduce food waste.",
           "Provide tips on reducing food waste in the kitchen.",
           "Recommend creative ways to repurpose leftover ingredients.",
@@ -156,7 +192,12 @@ export default {
           "Suggest ways to use stale bread to avoid food waste.",
         ];
       } else if (this.selectedPrompt === "moodChanger") {
-        return [
+        this.displayWasteReduction = false;
+        this.displayMood = true;
+        this.displaySuggestions = false;
+        this.displayDishes = false;
+        this.displayRecipe = false;
+        options = [
           "Suggest a recipe to boost your mood.",
           "Provide tips on foods that can improve your mood.",
           "Recommend mood-boosting foods to include in your diet.",
@@ -169,7 +210,12 @@ export default {
           "Suggest snacks to improve your mood throughout the day.",
         ];
       } else if (this.selectedPrompt === "cusineSuggestion") {
-        return [
+        this.displayWasteReduction = false;
+        this.displayMood = false;
+        this.displaySuggestions = true;
+        this.displayDishes = false;
+        this.displayRecipe = false;
+        options = [
           "Italian and Japanese",
           "Mexican and Chinese",
           "Indian and French",
@@ -177,86 +223,107 @@ export default {
           "Indian and Italian",
         ];
       } else if (this.selectedPrompt === "definedDishes") {
-        return ["Sweet Dishes", "Chicken Dishes", "Meat Dishes", "Milk Dishes"];
+        this.displayWasteReduction = false;
+        this.displayMood = false;
+        this.displaySuggestions = false;
+        this.displayDishes = true;
+        this.displayRecipe = false;
+        options = [
+          "Sweet Dishes",
+          "Chicken Dishes",
+          "Meat Dishes",
+          "Milk Dishes",
+        ];
       } else if (this.selectedPrompt === "uniqueRecipes") {
-        return [
+        this.displayWasteReduction = false;
+        this.displayMood = false;
+        this.displaySuggestions = false;
+        this.displayDishes = false;
+        this.displayRecipe = true;
+        options = [
           "banana rice apple",
           "apple rice pie",
           "rice mango tomatoes",
           "onions olives cheese",
           "tomatoes meat onions garlic spices",
         ];
-      } else {
-        return [];
       }
+
+      const results = queryString
+        ? options.filter((option) =>
+            option.toLowerCase().includes(queryString.toLowerCase())
+          )
+        : options;
+      cb(results);
     },
     async handleSelect(item) {
+      this.selectedOption = item;
+      this.loading = true;
+
       try {
-        this.loading = true;
-        this.selectedOption = item;
-        const user_input = item;
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("User not authenticated");
+        }
+        const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
         let endpoint;
+
         if (this.selectedPrompt === "foodWasteReduction") {
           endpoint = "/api/food-waste-reduction-using-gpt";
         } else if (this.selectedPrompt === "moodChanger") {
           endpoint = "/api/mood-changer-using-gpt";
-        } else if (this.selectedPrompt === "fusionSuggestions") {
+        } else if (this.selectedPrompt === "cusineSuggestion") {
           endpoint = "/api/fusion-cuisine-suggestion-using-gpt";
         } else if (this.selectedPrompt === "definedDishes") {
           endpoint = "/api/user-defined-dish-using-gpt";
         } else if (this.selectedPrompt === "uniqueRecipes") {
           endpoint = "/api/unique-recipes-using-gpt";
         }
+
         if (endpoint) {
           const response = await fetch(baseURL + endpoint, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
             },
-            body: JSON.stringify({ user_input }),
+            body: JSON.stringify({ user_input: item }),
           });
           const data = await response.json();
+
           this.foodWasteReductionSuggestions =
-            data.Food_Waste_Reduction_Suggestions;
-          this.moodChangerSuggestions = data.Mood_Changer;
-          this.fusionSuggestions = data.Fusion_Cuisine_Suggestions;
-          this.definedDishes = data.User_Defined_Dish;
-          this.uniqueRecipes = data.Unique_Recipes;
+            data.foodWasteReductionSuggestions || [];
+          this.moodChangerSuggestions = data.moodChangerSuggestions || [];
+          this.fusionSuggestions = data.fusionSuggestions || [];
+          this.definedDishes = data.definedDishes || [];
+          this.uniqueRecipes = data.uniqueRecipes || [];
         }
-        this.loading = false;
-        this.displayWasteReduction = true;
-        this.displayDishes = true;
-        this.displayRecipe = true;
-        this.displaySuggestions = true;
       } catch (error) {
-        this.error = error.message;
+        console.error("Error fetching data:", error);
+      } finally {
+        this.loading = false;
       }
     },
-    handleIconClick(ev) {
-      console.log(ev);
+    handleIconClick() {
       this.selectedOption = "";
       this.selectedPrompt = "";
     },
+    fetchData() {
+      // Placeholder for any additional logic to fetch data when selectedPrompt or selectedOption changes.
+      // This method can be expanded based on further requirements.
+    },
+  },
+  watch: {
+    selectedPrompt: {
+      handler: "fetchData", // Call fetchData when selectedPrompt changes
+      immediate: true, // Call fetchData initially when the component loads
+    },
+    selectedOption: "fetchData", // Call fetchData when selectedOption changes
   },
 };
 </script>
 
 <style scoped>
-/* .my-autocomplete {
-  li {
-    line-height: normal;
-    padding: 7px;
-
-    .value {
-      text-overflow: ellipsis;
-      overflow: hidden;
-    }
-    .link {
-      font-size: 12px;
-      color: #b4b4b4;
-    }
-  }
-} */
 .suggestions-container {
   margin-top: 20px;
 }

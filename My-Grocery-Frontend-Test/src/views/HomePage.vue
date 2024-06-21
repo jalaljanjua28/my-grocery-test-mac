@@ -80,15 +80,16 @@
 
 <script>
 import OffersPage from "@/views/OffersList.vue";
-import HomePrompt from "./HomePrompts.vue";
-import PurchasedList from "./PurchasedList.vue";
-import DeleteAllPurchaseList from "./DeleteAllPurchaseList.vue";
+import HomePrompt from "../components/HomePrompts.vue";
+import PurchasedList from "../components/PurchasedList.vue";
+import DeleteAllPurchaseList from "../components/DeleteAllPurchaseList.vue";
 import {
   fetchPurchasedListData,
   fetchMasterExpiredData,
   fetchShoppingListData,
 } from "@/plugins/Dataservice.js";
-import SearchInventory from "./SearchInventory.vue";
+import SearchInventory from "../components/SearchInventory.vue";
+import { auth } from "../Firebase.js";
 
 const baseUrl = "http://127.0.0.1:8081";
 
@@ -127,11 +128,6 @@ export default {
       const { Food, NonFood } = await fetchShoppingListData();
       this.Food = Food;
       this.NonFood = NonFood;
-      // Fetch master nonexpired data
-      // const { Food_nonexpired, NonFood_nonexpired } =
-      //   await fetchMasterNonexpiredData();
-      // this.Food_nonexpired = Food_nonexpired;
-      // this.NonFood_nonexpired = NonFood_nonexpired;
     } catch (error) {
       console.error("Error loading data:", error);
     }
@@ -148,71 +144,6 @@ export default {
     }
   },
   methods: {
-    // purchased_list() {
-    //   fetch(baseUrl + "/api/get-purchase-list", {
-    //     method: "GET",
-    //     mode: "cors",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //   })
-    //     .then((response) => {
-    //       if (response.ok) {
-    //         return response.json();
-    //       } else {
-    //         throw new Error("Failed to fetch data.");
-    //       }
-    //     })
-    //     .then((data) => {
-    //       try {
-    //         const base64Data = data.data;
-    //         const binaryData = new Uint8Array(
-    //           [...atob(base64Data)].map((char) => char.charCodeAt(0))
-    //         );
-    //         const textDecoder = new TextDecoder();
-    //         const decodedData = textDecoder.decode(binaryData);
-    //         const parsedData = JSON.parse(decodedData);
-    //         const Food = parsedData.Food.filter(
-    //           (item) => item.Name !== "TestFNE"
-    //         );
-    //         const NonFood = parsedData.Not_Food.filter(
-    //           (item) => item.Name !== "TestFNE"
-    //         );
-    //         for (const id in Food) {
-    //           const item = {
-    //             id: parseInt(id),
-    //             name: Food[id].Name,
-    //             image: Food[id].Image,
-    //             date: Food[id].Date,
-    //             expiry: Food[id].Expiry_Date,
-    //             price: Food[id].Price,
-    //             status: Food[id].Status,
-    //             days_left: Food[id].Days_Until_Expiry,
-    //           };
-    //           Food[id] = item;
-    //         }
-    //         for (const id in NonFood) {
-    //           const item = {
-    //             id: parseInt(id),
-    //             name: NonFood[id].Name,
-    //             image: NonFood[id].Image,
-    //             date: NonFood[id].Date,
-    //             price: NonFood[id].Price,
-    //             status: NonFood[id].Status,
-    //             days_left: NonFood[id].Days_Until_Expiry,
-    //           };
-    //           NonFood[id] = item;
-    //         }
-    //         this.Food_nonexpired = Food;
-    //         this.NonFood_nonexpired = NonFood;
-    //       } catch (error) {
-    //         console.error("Error:", error);
-    //       }
-    //     })
-    //     .catch((error) => {
-    //       console.error("Error:", error);
-    //     });
-    // },
     handleItemDeleted(itemToDelete) {
       this.items = this.items.filter((item) => item !== itemToDelete);
       // You can access the deleted item and target tab name here
@@ -229,41 +160,91 @@ export default {
       localStorage.setItem("activeOuterTab", tab.name);
       console.log("Outer Tab: " + this.outerActiveTab);
     },
+
     async jsonJokes() {
-      // Make a request to your backend endpoint
-      fetch(baseUrl + "/api/jokes-using-json")
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.jokes) {
-            this.jokes = data.jokes;
-          } else {
-            this.errorMessage = "Error retrieving jokes.";
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          this.errorMessage = "Error retrieving jokes.";
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("User not authenticated");
+        }
+        const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
+        console.log("idToken", idToken);
+
+        this.loading = true;
+        const response = await fetch(baseUrl + "/api/jokes-using-json", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
         });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Data Received:", data);
+
+        if (data.jokes) {
+          this.jokes = data.jokes;
+        } else {
+          this.errorMessage = "Error retrieving jokes.";
+        }
+
+        this.loading = false;
+      } catch (error) {
+        console.error("Error:", error);
+        this.errorMessage = "Error retrieving jokes.";
+        this.loading = false;
+      }
       this.displayJokes = true;
     },
+
     async gptJokes() {
       try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("User not authenticated");
+        }
+        const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
+        console.log("idToken", idToken);
+
         this.loading = true;
         await fetch(baseUrl + "/api/jokes-using-gpt", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
           },
           body: JSON.stringify({}),
         });
-        const response = await fetch(baseUrl + "/api/jokes-using-gpt");
+
+        const response = await fetch(baseUrl + "/api/jokes-using-gpt", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
         const data = await response.json();
-        this.jokes = data.jokes;
+        console.log("Data Received:", data);
+
+        if (data.jokes) {
+          this.jokes = data.jokes;
+        } else {
+          this.errorMessage = "Error retrieving jokes.";
+        }
+
         this.loading = false;
-        console.log("Jokes:", this.jokes);
-        this.user_input = "";
       } catch (error) {
-        this.error = error.message;
+        console.error("Error in gptJokes:", error);
+        this.errorMessage = error.message;
+        this.loading = false;
       }
     },
   },

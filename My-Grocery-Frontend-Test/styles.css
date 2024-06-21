@@ -294,7 +294,7 @@ strong {
 }
 .loading-indicator {
   text-align: center;
-  margin-top: 0px;
+  margin-top: 10px;
   background-color: none;
 }
 .loading-content {

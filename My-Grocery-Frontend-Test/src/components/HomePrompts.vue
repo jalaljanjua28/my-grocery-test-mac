@@ -320,7 +320,6 @@ export default {
         }
         const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
         console.log("idToken", idToken);
-
         this.loading = true;
         let response;
         if (type === "json") {
@@ -348,14 +347,11 @@ export default {
         } else {
           throw new Error("Invalid request type.");
         }
-
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
         const data = await response.json();
         console.log("Data Received:", data);
-
         if (property in data) {
           this[property] = data[property] || [];
           console.log(data[property]);
@@ -364,7 +360,6 @@ export default {
             `Property '${property}' not found in the server response.`
           );
         }
-
         this.loading = false;
       } catch (error) {
         this.errorMessage = error.message;

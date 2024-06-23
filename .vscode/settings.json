@@ -1,3 +1,21 @@
 {
-  "git.ignoreLimitWarning": true
+  "git.ignoreLimitWarning": true,
+  "cSpell.words": [
+    "axios",
+    "Dataservice",
+    "dateparser",
+    "ddtdcr",
+    "dotenv",
+    "firestore",
+    "gcloud",
+    "googleusercontent",
+    "handlingadvice",
+    "jalaljanjua",
+    "jsonify",
+    "mnnd",
+    "nonexpired",
+    "nutritioanl",
+    "openai",
+    "pytesseract"
+  ]
 }

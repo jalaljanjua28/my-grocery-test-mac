@@ -90,6 +90,7 @@ import {
 } from "@/plugins/Dataservice.js";
 import SearchInventory from "../components/SearchInventory.vue";
 import { auth } from "../Firebase.js";
+import { onAuthStateChanged } from "firebase/auth"; // Correctly import onAuthStateChanged from firebase/auth
 
 const baseUrl = "http://127.0.0.1:8081";
 
@@ -112,10 +113,12 @@ export default {
       Food_nonexpired: [],
       NonFood_nonexpired: [],
       item: [],
+      currentUser: null,
     };
   },
   async mounted() {
     try {
+      await this.checkAuth();
       await this.jsonJokes();
       const { Food_nonexpired, NonFood_nonexpired } =
         await fetchPurchasedListData();
@@ -124,7 +127,6 @@ export default {
       const { Food_expired, NonFood_expired } = await fetchMasterExpiredData();
       this.Food_expired = Food_expired;
       this.NonFood_expired = NonFood_expired;
-      // Fetch shopping list data
       const { Food, NonFood } = await fetchShoppingListData();
       this.Food = Food;
       this.NonFood = NonFood;
@@ -144,6 +146,16 @@ export default {
     }
   },
   methods: {
+    checkAuth() {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          this.currentUser = user;
+          console.log("User is logged in:", user);
+        } else {
+          console.log("No user is logged in");
+        }
+      });
+    },
     handleItemDeleted(itemToDelete) {
       this.items = this.items.filter((item) => item !== itemToDelete);
       // You can access the deleted item and target tab name here
@@ -169,7 +181,6 @@ export default {
         }
         const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
         console.log("idToken", idToken);
-
         this.loading = true;
         const response = await fetch(baseUrl + "/api/jokes-using-json", {
           method: "GET",
@@ -178,20 +189,16 @@ export default {
             Authorization: `Bearer ${idToken}`,
           },
         });
-
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
         const data = await response.json();
         console.log("Data Received:", data);
-
         if (data.jokes) {
           this.jokes = data.jokes;
         } else {
           this.errorMessage = "Error retrieving jokes.";
         }
-
         this.loading = false;
       } catch (error) {
         console.error("Error:", error);
@@ -200,7 +207,6 @@ export default {
       }
       this.displayJokes = true;
     },
-
     async gptJokes() {
       try {
         const currentUser = auth.currentUser;
@@ -209,7 +215,6 @@ export default {
         }
         const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
         console.log("idToken", idToken);
-
         this.loading = true;
         await fetch(baseUrl + "/api/jokes-using-gpt", {
           method: "POST",
@@ -219,7 +224,6 @@ export default {
           },
           body: JSON.stringify({}),
         });
-
         const response = await fetch(baseUrl + "/api/jokes-using-gpt", {
           method: "GET",
           headers: {
@@ -230,16 +234,13 @@ export default {
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
         const data = await response.json();
         console.log("Data Received:", data);
-
         if (data.jokes) {
           this.jokes = data.jokes;
         } else {
           this.errorMessage = "Error retrieving jokes.";
         }
-
         this.loading = false;
       } catch (error) {
         console.error("Error in gptJokes:", error);

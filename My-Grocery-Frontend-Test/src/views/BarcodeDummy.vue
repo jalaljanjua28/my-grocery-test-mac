@@ -4,41 +4,51 @@
 
 <script>
 import axios from "axios";
-// import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { auth } from "../Firebase.js"; // Assuming this is your Firebase initialization file
+import { onAuthStateChanged } from "firebase/auth";
 
 const axiosInstance = axios.create();
 axiosInstance.defaults.baseURL = "http://127.0.0.1:8081/api"; // Set your API base URL
 
 export default {
-  props: {
-    currentUser: Object,
-  },
   data() {
     return {
       selectedFile: "",
-      // localCurrentUser: this.currentUser,
+      currentUser: null,
     };
   },
+  mounted() {
+    this.checkAuth();
+  },
   methods: {
-    uploadImageProcessDummy(dummyFile = null) {
+    checkAuth() {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          this.currentUser = user;
+          console.log("User is logged in:", user);
+        } else {
+          console.log("No user is logged in");
+        }
+      });
+    },
+    async uploadImageProcessDummy(dummyFile = null) {
       const fileToUpload = dummyFile || this.selectedFile;
       console.log("File to upload:", fileToUpload);
 
       if (fileToUpload) {
         const formData = new FormData();
         formData.append("file", fileToUpload);
-        // formData.append("email", this.localCurrentUser.email);
-
-        // console.log(
-        //   "FormData before sending:",
-        //   formData.get("file"),
-        //   formData.get("email")
-        // );
-
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("User not authenticated");
+        }
+        const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
+        console.log("idToken", idToken);
         axiosInstance
           .post("/image-process-upload-create", formData, {
             headers: {
               "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${idToken}`,
             },
           })
           .then((response) => {
@@ -60,26 +70,14 @@ export default {
       }
     },
     simulateUpload() {
-      // if (user) {
-      //   this.localCurrentUser = user;
-      // }
-      // if (this.localCurrentUser) {
-      //   this.uploadImageProcessDummy();
-      // } else {
       const dummyFile = new File(["dummy content"], "dummy.jpg", {
         type: "image/jpeg",
       });
       console.log("Simulating upload with dummy file:", dummyFile);
       this.uploadImageProcessDummy(dummyFile);
       console.log("simulateUpload function called!");
-      // }
     },
   },
-  // watch: {
-  //   currentUser(newUser) {
-  //     this.localCurrentUser = newUser;
-  //   },
-  // },
 };
 </script>
 

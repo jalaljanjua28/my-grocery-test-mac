@@ -1,91 +1,152 @@
 // DataService.js
+import { auth } from "../Firebase.js";
+import { onAuthStateChanged } from "firebase/auth"; // Correctly import onAuthStateChanged from firebase/auth
+
 const baseUrl = "http://127.0.0.1:8081";
 
-export async function fetchMasterExpiredData() {
-  try {
-    const response = await fetch(baseUrl + "/api/get-master-expired", {
-      method: "GET",
-      mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+// export async function checkAuth() {
+//   onAuthStateChanged(auth, (user) => {
+//     if (user) {
+//       this.currentUser = user;
+//       console.log("User is logged in:", user);
+//     } else {
+//       console.log("No user is logged in");
+//     }
+//   });
+// }
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch data.");
-    }
-    const data = await response.json();
-    // Process data as needed
-    const processedData = processData(data);
-    return processedData;
-  } catch (error) {
-    console.error("Error fetching master expired data:", error);
-    throw error;
-  }
-}
-export async function fetchShoppingListData() {
-  try {
-    const response = await fetch(baseUrl + "/api/get-shopping-list", {
-      method: "GET",
-      mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-      },
+export async function fetchMasterExpiredData() {
+  return new Promise((resolve, reject) => {
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const idToken = await user.getIdToken(/* forceRefresh */ true);
+          console.log("idToken", idToken);
+          const response = await fetch(baseUrl + "/api/get-master-expired", {
+            method: "GET",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch data.");
+          }
+
+          const data = await response.json();
+          const processedData = processData(data);
+          resolve(processedData);
+        } catch (error) {
+          console.error("Error fetching master expired data:", error);
+          reject(error);
+        }
+      } else {
+        reject(new Error("User not authenticated"));
+      }
     });
-    if (!response.ok) {
-      throw new Error("Failed to fetch data.");
-    }
-    const data = await response.json();
-    // Process data as needed
-    const processedData = processData(data);
-    return processedData;
-  } catch (error) {
-    console.error("Error fetching shopping list data:", error);
-    throw error;
-  }
+  });
+}
+
+export async function fetchShoppingListData() {
+  return new Promise((resolve, reject) => {
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const idToken = await user.getIdToken(/* forceRefresh */ true);
+          console.log("idToken", idToken);
+          const response = await fetch(baseUrl + "/api/get-shopping-list", {
+            method: "GET",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch data.");
+          }
+
+          const data = await response.json();
+          const processedData = processData(data);
+          resolve(processedData);
+        } catch (error) {
+          console.error("Error fetching shopping list data:", error);
+          reject(error);
+        }
+      } else {
+        reject(new Error("User not authenticated"));
+      }
+    });
+  });
 }
 export async function fetchMasterNonexpiredData() {
-  try {
-    const response = await fetch(baseUrl + "/api/get-master-nonexpired", {
-      method: "GET",
-      mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+  return new Promise((resolve, reject) => {
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const idToken = await user.getIdToken(/* forceRefresh */ true);
+          console.log("idToken", idToken);
+          const response = await fetch(baseUrl + "/api/get-master-nonexpired", {
+            method: "GET",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch data.");
-    }
-    const data = await response.json();
-    // Process data as needed
-    const processedData = processData(data);
-    return processedData;
-  } catch (error) {
-    console.error("Error fetching master nonexpired data:", error);
-    throw error;
-  }
+          if (!response.ok) {
+            throw new Error("Failed to fetch data.");
+          }
+
+          const data = await response.json();
+          const processedData = processData(data);
+          resolve(processedData);
+        } catch (error) {
+          console.error("Error fetching master nonexpired data:", error);
+          reject(error);
+        }
+      } else {
+        reject(new Error("User not authenticated"));
+      }
+    });
+  });
 }
 export async function fetchPurchasedListData() {
-  try {
-    const response = await fetch(baseUrl + "/api/get-purchase-list", {
-      method: "GET",
-      mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-      },
+  return new Promise((resolve, reject) => {
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const idToken = await user.getIdToken(/* forceRefresh */ true);
+          console.log("idToken", idToken);
+          const response = await fetch(baseUrl + "/api/get-purchased-list", {
+            method: "GET",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch data.");
+          }
+
+          const data = await response.json();
+          const processedData = processData(data);
+          resolve(processedData);
+        } catch (error) {
+          console.error("Error fetching purchase list data:", error);
+          reject(error);
+        }
+      } else {
+        reject(new Error("User not authenticated"));
+      }
     });
-    if (!response.ok) {
-      throw new Error("Failed to fetch data.");
-    }
-    const data = await response.json();
-    // Process data as needed
-    const processedData = processData(data);
-    return processedData;
-  } catch (error) {
-    console.error("Error fetching master nonexpired data:", error);
-    throw error;
-  }
+  });
 }
 function processData(data) {
   try {
